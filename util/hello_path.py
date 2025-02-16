@@ -6,3 +6,4 @@ def hello_path(request, handler):
     res = Response()
     res.text("hello")
     handler.request.sendall(res.to_data())
+
