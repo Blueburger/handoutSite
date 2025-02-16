@@ -6,7 +6,6 @@
     <title>312site.com</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="icon" type="image/x-icon" href="/public/imgs/favicon.ico" />
-    <link rel="stylesheet" href="/public/css/globals.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="/public/css/googleButton.css" />
@@ -120,47 +119,35 @@
           <div class="nav-group">
             <i data-lucide="message-circle"></i>
             <a href="/chat">Chat</a>
-            <!-- <p class="lo">LO/AO</p> -->
           </div>
 
-          <!-- <div class="nav-group">
-            <i data-lucide="newspaper"></i>
-            <a href="/feed">Feed</a>
-            <p class="ao">AO</p>
-          </div> -->
-
-          <label>Homework 2</label>
+          <!-- <label>Homework 2</label>
           <div class="nav-group">
             <i data-lucide="users"></i>
             <a href="/your-profile">Your Profile</a>
-            <!-- <p class="lo">LO/AO</p> -->
           </div>
 
           <div class="nav-group">
             <i data-lucide="search"></i>
             <a href="/search-users">Search Users</a>
-            <!-- <p class="lo">LO/AO</p> -->
           </div>
 
           <div class="nav-group">
             <i data-lucide="settings"></i>
             <a href="/settings">Settings</a>
-            <!-- <p class="lo">LO/AO</p> -->
           </div>
 
           <label>Homework 3</label>
           <div class="nav-group">
             <i data-lucide="graduation-cap"></i>
             <a href="/312learn">312learn</a>
-            <!-- <p class="ao">AO</p> -->
           </div>
 
           <label>Homework 4</label>
           <div class="nav-group">
             <i data-lucide="pen-tool"></i>
             <a href="/drawing-board">Drawing Board</a>
-            <!-- <p class="lo">LO/AO</p> -->
-          </div>
+          </div> -->
         </div>
       </navbar>
 
@@ -203,7 +190,7 @@
       lucide.createIcons();
 
       async function main() {
-        const userProfile = await (await fetch("/api/users/@me")).json();
+        // const userProfile = await (await fetch("/api/users/@me")).json();
         const loginButton = document.getElementById("login-button");
         const registerButton = document.getElementById("register-button");
         const loggedIn = document.getElementById("logged-in");
