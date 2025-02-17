@@ -6,7 +6,8 @@ fileLibrary = {
     "html": "text/html; charset=UTF-8",
     "css": "text/css; charset=UTF-8", 
     "jpg":"image/jpeg",
-    "png":"image/png"
+    "png":"image/png",
+    "gif":"image/gif"
 }
 
 class Response:
@@ -19,7 +20,10 @@ class Response:
         self.status = 'OK'
         self.headList = requiredHeaders()
         self.cookieList = {}
-
+        self.path = ''
+        self.validPath = True
+        self.method = ''
+        self.data4json = ''
 
     def set_status(self, code, text):
         self.responseTxt += f"{code} {text}"
@@ -34,6 +38,7 @@ class Response:
             # this way if headers is called again it won't re add already added headers
             # this also means that the allHeader arg for this function MUST be the self.headList value
             #self.headList.pop(elem)
+            # does not work raises error and in retrospect it wasn't even an issue to begin with
         return self
 
 
@@ -49,6 +54,7 @@ class Response:
 
     # to be used when the body of the request is data that SHOULD NOT BE DECODED
     def bytes(self, data):
+        self.body = b''
         self.body += data
         return self
     
@@ -59,8 +65,8 @@ class Response:
         
 
     def json(self, data):
-        self.headList.update({"Content-Type":"application/js; charset=UTF-8"})
-        loadData = json.loads(data)
+        self.headList.update({"Content-Type":"application/json; charset=UTF-8"})
+        loadData = json.dumps(data)
         self.body = loadData
         return self
 
@@ -70,52 +76,64 @@ class Response:
         self.responseTxt += self.http 
         # step 2: set the status
         self.set_status(self.code, self.status)
-    
-
         # step 3: apply necessary headers
-        
-        
         findContentLength(self.body,self.headList)
+        findContentType(self.path,self.headList)
         self.headers(self.headList)
-
-
         # step 4: apply necessary cookies
         self.cookies(self.cookieList)
         # step 5: apply necessary body data
         # we are assuming here that text/data would have been called already
         # all that is left is to add that data onto the end of the response
-
         # adds the double CRLF that preceeds body
         self.responseTxt += "\r" + "\n" + "\r" + "\n"
         # encode the response text as bytes
         self.responseTxt = self.responseTxt.encode()
         # encodes the existing body data if it is not already
+        if "POST" in self.method:
+            self.json(self.data4json)
         if isinstance(self.body, str):
             self.body = self.body.encode()
+        
         # add the body data to the encoded response text, body data is assumed to be encoded already
         self.responseTxt = self.responseTxt + self.body
-        return self.responseTxt
+        if self.validPath == True:
+            return self.responseTxt
+        else:
+            er = "HTTP/1.1 404 notFound\r\nX-ContentTypeOptions: nosniff\r\nContent-Type: text/plain\r\nContent-Length: 43\r\n\r\nThe Page you are looking for does not exist".encode()
+            return er
         #return b''
 
 # fileReader takes in a string path and returns the file data
 # does NOT check if path is valid, this will need to be handled before calling this function
 def fileReader(path):
-    with open (f".{path}","rb") as file:
-        data = file.read()
-    return data
-
+    try:
+        with open (f".{path}","rb") as file:
+            data = file.read()
+        return data
+    except FileNotFoundError:
+        return b"e"
+    
+        
 # uses file name to find content type and adds to headerList
 def findContentType(file, headerList):
-    name, extension = file.split(".")
-    contentType = fileLibrary[extension]
-    headerList.update({"Content-Type":contentType})
+    #print(f"\n\nfile: {file}\n\n")
+    try:
+        name, extension = file.split(".")
+        contentType = fileLibrary[extension]
+        headerList.update({"Content-Type":contentType})
+        return "f"
+    except ValueError:
+        return "e"
+        
+        
 
 # uses the body data to determine the content length
 def findContentLength(data, headerList):
-    print(f"data: {data}\nheadlistb4: {headerList}")
+    #print(f"data: {data}\nheadlistb4: {headerList}")
     contentLength = str(len(data))
     headerList.update({"Content-Length":contentLength})
-    print(f"headlist after: {headerList}")
+    #print(f"headlist after: {headerList}")
 
 # a creates and returns a dictionary of headers
 # this dict will be updated as the response is built to contain all proper headers
@@ -133,7 +151,7 @@ def test1():
     res.text("hello")
     expected = b'HTTP/1.1 200 OK\r\nX-ContentTypeOptions: nosniff\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Length: 5\r\n\r\nhello'
     actual = res.to_data()
-    print(f"actual: {actual}")
+    #print(f"actual: {actual}")
     assert expected == actual
     print(f"\n\n----\ntest passed\n----\n\n")
 
