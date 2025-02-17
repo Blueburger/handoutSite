@@ -44,7 +44,7 @@ def insertMessage(message,id,cookies):
         uniqueId = str(uuid.uuid4())
         retCode = (True,uniqueId)   
     if uniqueId == "/":
-        uniqueId = str(uuid4())
+        uniqueId = str(uuid.uuid4())
         retCode = (True,uniqueId)
     displayName = str(uniqueId)
     for char in displayName:
