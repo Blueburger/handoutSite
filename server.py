@@ -10,12 +10,16 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         self.router = Router()
         self.router.add_route("GET", "/hello", hello_path, True)
         # TODO: Add your routes here
-        self.router.add_route("GET","/", pr.serveHTML, False)
-
+        self.router.add_route("GET","/", pr.serveHTML, True)
+        self.router.add_route("GET","/chat", pr.serveHTML, True)
+        self.router.add_route("GET","/public/js", pr.serveHTML, False)
+        self.router.add_route("GET","/public/css", pr.serveCSS, False)
+        self.router.add_route("GET","/api/chats", pr.serveChats, True)
         self.router.add_route("POST","/api/chats", pr.addChats, True)
-        self.router.add_route("GET","/api/chats", pr.serveChats, False)
-        self.router.add_route("PATCH","/api/chats/{id}", pr.updateChats, False)
-        self.router.add_route("DELETE","/api/chats/{id}", pr.deleteChats, False)
+        #self.router.add_route("GET","/api/chats", pr.serveChats, True)
+        self.router.add_route("PATCH","/api/chats/", pr.updateChats, False)
+        self.router.add_route("DELETE","/api/chats/", pr.deleteChats, False)
+        
         super().__init__(request, client_address, server)
 
     def handle(self):

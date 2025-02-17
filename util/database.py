@@ -41,9 +41,11 @@ def insertMessage(message,id,cookies):
     if session:
         uniqueId = cookies["session"]
     else:    
-        uniqueId = uuid.uuid4()
+        uniqueId = str(uuid.uuid4())
         retCode = (True,uniqueId)   
-
+    if uniqueId == "/":
+        uniqueId = str(uuid4())
+        retCode = (True,uniqueId)
     displayName = str(uniqueId)
     for char in displayName:
         if ord(char) % 2 == 0:
@@ -74,7 +76,7 @@ def insertMessage(message,id,cookies):
     authenticated = False 
 
     if not authenticated:
-        insert = {"author":guestName,"id":id,"updated":False,"deleted":"False"}
+        insert = {"author":guestName,"id":id,"updated":False,"deleted":"False","authorId":uniqueId}
                   
     else:
         # eventually the logic for checking and authenticationg the XSRF token will be here
@@ -103,7 +105,6 @@ def deleteMessage(id):
 def updateMessage(id,body):
     strId = str(id)
     filter = {"id": strId}
-    user = body["username"]
-    newMessage = body["message"]
-    update = {'$set':{"username":user,"message":newMessage}}
+    newMessage = body["content"]
+    update = {'$set':{"content":newMessage,"updated":True}}
     success = chat_collection.update_one(filter,update)

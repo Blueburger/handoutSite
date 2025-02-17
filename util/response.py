@@ -15,7 +15,7 @@ class Response:
         
         self.responseTxt = ''
         self.http = 'HTTP/1.1 '
-        self.body = ''
+        self.body = b''
         self.code = '200'
         self.status = 'OK'
         self.headList = requiredHeaders()
@@ -54,20 +54,23 @@ class Response:
 
     # to be used when the body of the request is data that SHOULD NOT BE DECODED
     def bytes(self, data):
-        self.body = b''
         self.body += data
         return self
     
     # akin to bytes but when the body of the request can be plaintext
     def text(self, data):
+        data = data.encode()
         self.body += data
         return self
         
 
     def json(self, data):
+        # I mean this should work, json.dumps takes list, string, and dict as valid types
         self.headList.update({"Content-Type":"application/json; charset=UTF-8"})
+        
         loadData = json.dumps(data)
-        self.body = loadData
+        #print(f"load data value: {loadData}")
+        self.body = loadData.encode()
         return self
 
     # to data will be the builder, it will call all the necessary functions to build and return the proper response
@@ -90,14 +93,16 @@ class Response:
         # encode the response text as bytes
         self.responseTxt = self.responseTxt.encode()
         # encodes the existing body data if it is not already
-        if "POST" in self.method:
-            self.json(self.data4json)
+        
         if isinstance(self.body, str):
             self.body = self.body.encode()
         
         # add the body data to the encoded response text, body data is assumed to be encoded already
         self.responseTxt = self.responseTxt + self.body
         if self.validPath == True:
+            #print(f"\n\nResponse Text: {self.responseTxt}")
+            if self.method == "POST":
+                print(f"\n\nResponse Text: {self.responseTxt}")
             return self.responseTxt
         else:
             er = "HTTP/1.1 404 notFound\r\nX-ContentTypeOptions: nosniff\r\nContent-Type: text/plain\r\nContent-Length: 43\r\n\r\nThe Page you are looking for does not exist".encode()

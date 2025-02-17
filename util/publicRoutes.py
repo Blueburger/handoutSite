@@ -6,6 +6,17 @@ import uuid
 
 # according to project write up, I may need to use a different function
 # when the requested path is "/" and "/chat"
+def serveCSS(request, handler):
+    res = Response()
+    res.path = request.path
+    hehe = response.findContentType(res.path, res.headList)
+    if hehe == "e":
+        res.validPath = False
+
+    data = response.fileReader(res.path).decode()
+    res.text(data)
+    handler.request.sendall(res.to_data())
+
 def serveHTML(request, handler):
     # initializing the response object first will allow for working with data in that object
     res = Response()
@@ -92,6 +103,22 @@ def serveHTML(request, handler):
 
 # for getting & displaying chat messages
 def serveChats(request, handler):
+    res2 = Response()
+    res2.path = request.path
+    allData = dbm.getAllMessages()
+        
+    retList = []
+    headList = res2.headList
+    for x in allData:
+        if x.get("deleted") != "True":
+            # for making the data more human readable, remove the ID value mongo assigns
+            cleanx = {key: value for key, value in x.items() if key != '_id'}
+            retList.append(cleanx)
+    res2.data4json = {"messages":retList}
+    res2.json({"messages":retList})
+    handler.request.sendall(res2.to_data())
+
+def serveChatsOld(request, handler):
     print(f"I am trying to respond with chats")
     res = Response()
     res.path = request.path
@@ -139,9 +166,10 @@ def addChats(request, handler):
     if retCode[0]:
         # must set session cookie
         unique = str(retCode[1])
+        print(f"unique val: {unique}")
         directives = "; Path=/; Max-Age=259200; HttpOnly; Secure; SameSite=Strct"
         value = unique+directives
-        res.cookies({"session":value})
+        res.cookieList.update({"session":value})
 
     allData = dbm.getAllMessages()
     retListPost = []
@@ -150,6 +178,7 @@ def addChats(request, handler):
         retListPost.append(cleanx)
     lastValue2 = retListPost[-1]
     res.data4json = lastValue2
+    res.json(lastValue2)
     res.status = "Created"
     res.code = "200"
     
@@ -158,7 +187,32 @@ def addChats(request, handler):
     print(f"final response: {res.responseTxt}")
 # for updating a chat message
 def updateChats(request, handler):
-    pass
+    print("UPDATING CHAT")
+    res = Response()
+    update = json.loads(request.body)
+    res.path = request.path
+    print(f"requested update: {request.path}")
+    msgId = res.path.split('/chats/')[1]
+    
+    
+    message = dbm.findMessageById(msgId)
+    print(f"Message: {message}")
+    whoCanEdit = message[0]["authorId"]
+
+    session = request.cookies.get("session")
+    print(request.cookies.items())
+    print(f"session: {session}")
+    print(f"who can edit: {whoCanEdit}")
+    if session == whoCanEdit:
+        print("permission to update granted")
+        dbm.updateMessage(msgId,update)
+    else:
+        print("you lack perms")
+        res.code = 403
+        res.status = "Forbidden"
+    
+    handler.request.sendall(res.to_data())
+
 
 # for deleting a chat message
 def deleteChats(request, handler):
