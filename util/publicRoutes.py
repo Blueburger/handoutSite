@@ -167,7 +167,7 @@ def addChats(request, handler):
         # must set session cookie
         unique = str(retCode[1])
         print(f"unique val: {unique}")
-        directives = "; Path=/; Max-Age=259200; HttpOnly; Secure; SameSite=Strct"
+        directives = "; Path=/; Max-Age=259200; HttpOnly; SameSite=Strict"
         value = unique+directives
         res.cookieList.update({"session":value})
 
@@ -203,6 +203,7 @@ def updateChats(request, handler):
     print(request.cookies.items())
     print(f"session: {session}")
     print(f"who can edit: {whoCanEdit}")
+    print(f"session:{session}\nwhocanedit:{whoCanEdit}")
     if session == whoCanEdit:
         print("permission to update granted")
         dbm.updateMessage(msgId,update)

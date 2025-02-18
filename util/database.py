@@ -4,7 +4,6 @@ import os
 from util import publicRoutes as pr
 from pymongo import MongoClient
 import uuid
-
 docker_db = os.environ.get('DOCKER_DB', "false")
 
 if docker_db == "true":
@@ -36,27 +35,41 @@ def insertMessage(message,id,cookies):
     # the uuid by itself will be set as the session cookie
     # because this cookie only needs to be sent when someone sends a message
     # the logic for it will be localized here (may potentially use helper funcs if I think it simplifies things)
-    retCode = "N/A"
+    retCode = (False,"haha")
+    # session will either get the session token of whoever sent the message or return None
     session = cookies.get("session")
+    # if session exists then the uniqueID for this user is the session token
     if session:
         uniqueId = cookies["session"]
     else:    
+        # if no session token exists one is created and the return value is a tuple that informs the caller t
+        # that a new uuid was generated along with returning at uuid as a string
         uniqueId = str(uuid.uuid4())
-        retCode = (True,uniqueId)   
-    if uniqueId == "/":
-        uniqueId = str(uuid.uuid4())
-        retCode = (True,uniqueId)
+        retCode = (True,uniqueId)     
+    # unsure why this issue was happening exactly but when DB gets reset the first message
+    # sent will always assign the session token as /
+    # hopefully not a sign of a bigger issue, the easy fix is to explicity check if the session token value is /
+    # and then treat it as if this is someone new sending msg for first time
+    #if uniqueId == "/":
+    #    uniqueId = str(uuid.uuid4())
+    #    retCode = (True,uniqueId)
+    
     displayName = str(uniqueId)
-    for char in displayName:
-        if ord(char) % 2 == 0:
-            displayName = displayName.replace(char,"X")
-        if ord(char) % 3 == 0:
-            displayName = displayName.replace(char,"D")
-        if ord(char) % 5 == 0:
-            displayName = displayName.replace(char,":")
-        if ord(char) % 7 == 0:
-            displayName = displayName.replace(char,"3")
-    guestName = "Guest:" + displayName
+    displayName = findGuestName(displayName)
+    
+    # originally I was using the uuid as the guest display name, realized the security flaw in that
+    # then I decided to use the uuid still but replace chars so real uuid is protected
+    # but the resulting names were hard to make out and even though they were unique it was hard to tell
+    #for char in displayName:
+    #    if ord(char) % 2 == 0:
+    #        displayName = displayName.replace(char,"X")
+    #    if ord(char) % 3 == 0:
+    #        displayName = displayName.replace(char,"D")
+    #    if ord(char) % 5 == 0:
+    #        displayName = displayName.replace(char,":")
+    #    if ord(char) % 7 == 0:
+    #        displayName = displayName.replace(char,"3")
+    
     
 
 
@@ -67,6 +80,18 @@ def insertMessage(message,id,cookies):
         id = int(id)
         id +=1
     id = str(id)
+
+    if not displayName:
+        msgs = getAllMessages()
+        try:
+            lastMsg = msgs[-1]
+            lastMsgID = int(lastMsg["id"])
+            newVal = lastMsgID +1
+        except IndexError:
+            newVal = 1
+        guestName = "Guest:" + str(newVal)
+    else:
+        guestName = displayName
     # token and auth stuff will eventually go here
     # on second thought Im just going to add it here rn
     token = cookies.get("token")
@@ -88,6 +113,17 @@ def insertMessage(message,id,cookies):
 
     return retCode
 
+# takes in a string of a uuid and returns the name of whatever guest has that Id
+def findGuestName(id):
+    guestName = list(chat_collection.find({"authorId":id}))
+    try:
+        guestName = guestName[0]["author"]
+    except IndexError:
+        guestName = None
+    with open("logs.txt","w") as file:
+        file.write(f"guestName retrieved: {guestName}")
+    print(f"GUEST NAME: {guestName}")
+    return guestName
 
 def getAllMessages():
     return list(chat_collection.find({}))

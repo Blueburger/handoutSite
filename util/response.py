@@ -46,6 +46,7 @@ class Response:
     # in this situation the cookie dict values should be along the lines of cookieName: cookie value and all directives
     def cookies(self, cookies):
         for elem, val in cookies.items():
+            print(f"SETTING COOKIES:\nelem:{elem}\nvalue:{val}")
             cookieType = elem
             cookieVal = val
             self.responseTxt = self.responseTxt + "\r" + "\n" + "Set-Cookie: " + str(cookieType) + "=" + str(cookieVal)
@@ -94,8 +95,8 @@ class Response:
         self.responseTxt = self.responseTxt.encode()
         # encodes the existing body data if it is not already
         
-        if isinstance(self.body, str):
-            self.body = self.body.encode()
+        if not isinstance(self.body, bytes):
+            self.body = str(self.body).encode()
         
         # add the body data to the encoded response text, body data is assumed to be encoded already
         self.responseTxt = self.responseTxt + self.body
