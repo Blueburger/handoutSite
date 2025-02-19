@@ -190,6 +190,17 @@ def updateChats(request, handler):
     print("UPDATING CHAT")
     res = Response()
     update = json.loads(request.body)
+
+    #print(f"update value: {update}")
+    uContent = update.get('content')
+    uContent = uContent.replace("&","&amp")
+    uContent = uContent.replace("<","&lt")
+    uContent = uContent.replace(">","&gt")
+    update.update({'content':uContent})
+
+    #print(f"update now:{update}")
+
+
     res.path = request.path
     print(f"requested update: {request.path}")
     msgId = res.path.split('/chats/')[1]
@@ -217,4 +228,20 @@ def updateChats(request, handler):
 
 # for deleting a chat message
 def deleteChats(request, handler):
-    pass
+    res = Response()
+    
+    res.path = request.path
+    
+    msgId = res.path.split('/chats/')[1]
+    message = dbm.findMessageById(msgId)
+    whoCanEdit = message[0]["authorId"]
+    session = request.cookies.get("session")
+
+    if session == whoCanEdit:
+        print("permission to delete granted")
+        dbm.deleteMessage(msgId)
+    else:
+        #print("you lack perms")
+        res.code = 403
+        res.status = "Forbidden"
+    handler.request.sendall(res.to_data())

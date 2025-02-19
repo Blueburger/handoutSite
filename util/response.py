@@ -7,13 +7,14 @@ fileLibrary = {
     "css": "text/css; charset=UTF-8", 
     "jpg":"image/jpeg",
     "png":"image/png",
-    "gif":"image/gif"
+    "gif":"image/gif",
+    "webp":"image/webp"
 }
 
 class Response:
     def __init__(self):
         
-        self.responseTxt = ''
+        self.responseTxt = b''
         self.http = 'HTTP/1.1 '
         self.body = b''
         self.code = '200'
@@ -26,14 +27,14 @@ class Response:
         self.data4json = ''
 
     def set_status(self, code, text):
-        self.responseTxt += f"{code} {text}"
+        self.responseTxt += (f"{code} {text}").encode()
         return self
 
     def headers(self, allHeader):
         for elem, val in allHeader.items():
             headType = elem
             headVal = val
-            self.responseTxt = self.responseTxt + "\r" + "\n" + str(headType) + ": " + str(headVal)
+            self.responseTxt = self.responseTxt + ("\r" + "\n" + str(headType) + ": " + str(headVal)).encode()
             # ideally this will remove the key value pair that was just added to the response
             # this way if headers is called again it won't re add already added headers
             # this also means that the allHeader arg for this function MUST be the self.headList value
@@ -49,7 +50,7 @@ class Response:
             print(f"SETTING COOKIES:\nelem:{elem}\nvalue:{val}")
             cookieType = elem
             cookieVal = val
-            self.responseTxt = self.responseTxt + "\r" + "\n" + "Set-Cookie: " + str(cookieType) + "=" + str(cookieVal)
+            self.responseTxt = self.responseTxt + ("\r" + "\n" + "Set-Cookie: " + str(cookieType) + "=" + str(cookieVal)).encode()
             #self.cookieList.pop(elem)
         return self
 
@@ -77,7 +78,7 @@ class Response:
     # to data will be the builder, it will call all the necessary functions to build and return the proper response
     def to_data(self):
         # step 1: set the http versions
-        self.responseTxt += self.http 
+        self.responseTxt += self.http.encode() 
         # step 2: set the status
         self.set_status(self.code, self.status)
         # step 3: apply necessary headers
@@ -90,9 +91,10 @@ class Response:
         # we are assuming here that text/data would have been called already
         # all that is left is to add that data onto the end of the response
         # adds the double CRLF that preceeds body
-        self.responseTxt += "\r" + "\n" + "\r" + "\n"
+        self.responseTxt += ("\r" + "\n" + "\r" + "\n").encode()
         # encode the response text as bytes
-        self.responseTxt = self.responseTxt.encode()
+        # updated so response text should always be bytes
+        #self.responseTxt = self.responseTxt.encode()
         # encodes the existing body data if it is not already
         
         if not isinstance(self.body, bytes):

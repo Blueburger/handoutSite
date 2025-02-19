@@ -2,10 +2,13 @@ class Request:
 
     def __init__(self, request: bytes):
         # TODO: parse the bytes of the request and populate the following instance variables
+        splitter = ('\r\n\r\n').encode()
+        splitReq = request.split(splitter)
+        print(f"splitreq:{splitReq}")
         
-        decodedText = self.stringify(request)
+        decodedText = self.stringify(splitReq[0])
         divyUp = decodedText.split('\r\n')
-
+        print(f"divyUp:{divyUp}")
         self.body = b""
         self.method = ""
         self.path = ""
@@ -18,10 +21,13 @@ class Request:
         self.joshAllen(mvp)
 
         try:
-            workableData = self.parseHeaders(divyUp)
-            bodydataLen = len(workableData)
-            bodyData = workableData[bodydataLen-1]
-            self.body = bodyData.encode()
+            #workableData = self.parseHeaders(divyUp)
+            #print(f"workable data:{workableData}")
+            #bodydataLen = len(workableData)
+            #bodyData = workableData[bodydataLen-1]
+            #self.body = bodyData.encode()
+            self.parseHeaders(divyUp)
+            self.body = splitReq[1]
         except IndexError:
             pass
 
@@ -29,23 +35,18 @@ class Request:
     # takes in a request then builds that request back as a string of decoded characters
     # note, this will not be proper for image uploads but that isn't relevant in HW 1
     def stringify(self, req):
-        bs= ""
-        for char in req:
-            bs = bs+chr(char)
-        return bs
+        return req.decode("utf-8")
     
     # sets the method, version, and path variables, aka the MVP: Josh Allen
     def joshAllen(self, mvpString):
         jAllen = mvpString.split(' ')
-        try:
-            self.method = jAllen[0]
-            self.path = jAllen[1]
-            self.http_version = jAllen[2].split('/')[1]
-        except IndexError:
-            pass
+        self.method = jAllen[0] if len(jAllen) > 0 else ""
+        self.path = jAllen[1] if len(jAllen) > 1 else "/"
+        self.http_version = jAllen[2].split('/')[1] if len(jAllen) > 2 else "1.1"
+        
 
     # parseHeaders takes in a list of strings, each string in list is a header key and value, sets header and cookie dicts
-    def parseHeaders(self, headers):
+    def parseHeadersOld(self, headers):
         cookies = False
         prevHeader = "null"
 
@@ -73,6 +74,23 @@ class Request:
                     self.headers[head] = value
             prevHeader = headPair
         return headers
+    
+
+
+    def parseHeaders(self, headers):
+        for headPair in headers:
+            if ": " not in headPair:
+                continue
+        
+            key, value = headPair.split(": ", 1)
+            self.headers[key] = value
+            
+            if key == "Cookie":
+                for cookiePair in value.split("; "):
+                    if "=" in cookiePair:
+                        cookieKey, cookieVal = cookiePair.split("=", 1)
+                        self.cookies[cookieKey.strip()] = cookieVal.strip()
+                        
     
 def test1():
     request = Request(b'GET / HTTP/1.1\r\nHost: localhost:8080\r\nConnection: keep-alive\r\n\r\n')
