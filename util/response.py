@@ -118,9 +118,9 @@ class Response:
         self.responseTxt = self.responseTxt + self.body
 
         if self.validPath == True:
-            
             return self.responseTxt
         else:
+            print(f"the requested path for:{self.path}\nwas invalid and has been aborted")
             er = "HTTP/1.1 404 Not Found\r\nX-ContentTypeOptions: nosniff\r\nContent-Type: text/plain\r\nContent-Length: 43\r\n\r\nThe Page you are looking for does not exist".encode()
             return er
 
@@ -142,7 +142,8 @@ def findContentType(file, headerList):
     try:
         name, extension = file.split(".")
         contentType = fileLibrary.get(extension)
-        headerList.update({"Content-Type":contentType})
+        if contentType:
+            headerList.update({"Content-Type":contentType})
         return "f"
     except ValueError:
         return "e"

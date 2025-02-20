@@ -16,9 +16,10 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         self.router.add_route("GET","/public/css", pr.serveCSS, False)
         self.router.add_route("GET","/api/chats", pr.serveChats, True)
         self.router.add_route("POST","/api/chats", pr.addChats, True)
-        self.router.add_route("GET","/public/imgs",pr.serveHTML, False)
+        self.router.add_route("GET","/public/imgs",pr.serveImg, False)
         self.router.add_route("PATCH","/api/chats/", pr.updateChats, False)
         self.router.add_route("DELETE","/api/chats/", pr.deleteChats, False)
+        self.router.add_route("GET","/favicon.ico", pr.faviconLoader, True)
         
         super().__init__(request, client_address, server)
 

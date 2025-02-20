@@ -4,11 +4,11 @@ class Request:
         # TODO: parse the bytes of the request and populate the following instance variables
         splitter = ('\r\n\r\n').encode()
         splitReq = request.split(splitter)
-        print(f"splitreq:{splitReq}")
+        #print(f"splitreq:{splitReq}")
         
         decodedText = self.stringify(splitReq[0])
         divyUp = decodedText.split('\r\n')
-        print(f"divyUp:{divyUp}")
+        #print(f"divyUp:{divyUp}")
         self.body = b""
         self.method = ""
         self.path = ""
@@ -25,8 +25,7 @@ class Request:
 
 
 
-    # takes in a request then builds that request back as a string of decoded characters
-    # note, this will not be proper for image uploads but that isn't relevant in HW 1
+    # takes in a request without body and returns that decoded
     def stringify(self, req):
         return req.decode("utf-8")
     
@@ -34,43 +33,12 @@ class Request:
     def joshAllen(self, mvpString):
         jAllen = mvpString.split(' ')
 
-        self.method = jAllen[0] if len(jAllen) > 0 else ""
+        self.method = jAllen[0] if len(jAllen) > 0 else "GET"
         self.path = jAllen[1] if len(jAllen) > 1 else "/"
         self.http_version = jAllen[2] if len(jAllen) > 2 else "HTTP/1.1"
         
 
     # parseHeaders takes in a list of strings, each string in list is a header key and value, sets header and cookie dicts
-    def parseHeadersOld(self, headers):
-        cookies = False
-        prevHeader = "null"
-
-        for headPair in headers:
-            if headPair != "" and prevHeader != "":
-                splitValues = headPair.split(": ")
-                head = splitValues[0]
-                if head == "Cookie":
-                    cookies = True
-                try:
-                    value = splitValues[1]
-                except IndexError:
-                    pass
-                if cookies:
-                    self.headers[head] = value
-                    seperateCookies = value.split("; ")
-                    for cookiePair in seperateCookies:
-                        pairing = cookiePair.split("=")
-                        try:
-                            self.cookies[pairing[0]] = pairing[1]
-                        except IndexError:
-                            pass
-                    cookies = False
-                else:
-                    self.headers[head] = value
-            prevHeader = headPair
-        return headers
-    
-
-
     def parseHeaders(self, headers):
         for headPair in headers:
             if ": " not in headPair:

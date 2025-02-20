@@ -17,6 +17,30 @@ def serveCSS(request, handler):
     res.text(data)
     handler.request.sendall(res.to_data())
 
+# Image handler should handle all responses for /public/img requests
+def serveImg(request, handler):
+    res = Response()
+    res.path = request.path
+    response.findContentLength(res.path,res.headList)
+    data = response.fileReader(res.path)
+    if data == "e" or data == b"e":
+        res.validPath = False
+    res.bytes(data)
+    handler.request.sendall(res.to_data())
+
+def faviconLoader(request, handler):
+    res = Response()
+    print(f"requested:{request.path}")
+    res.path = "/public/imgs/favicon.ico"
+    response.findContentLength(res.path,res.headList)
+    data = response.fileReader(res.path)
+    if data == "e" or data == b"e":
+        res.validPath = False
+    res.bytes(data)
+    handler.request.sendall(res.to_data())
+
+
+
 def serveHTML(request, handler):
     # initializing the response object first will allow for working with data in that object
     res = Response()
@@ -27,12 +51,6 @@ def serveHTML(request, handler):
     path = request.path
     if request.path == "/":
         path += "/public/index.html"
-    if "css" in path:
-        path2 = "/public/css"
-        if "/public/css" in path:
-            i = 0
-        else:
-            path = path2 + path
     if "js" in path:
         path2 = "/public/js"
         if "/public/js" in path:
@@ -46,25 +64,16 @@ def serveHTML(request, handler):
         path = "/public/chat.html"
 
     res.path = path
-    #print(f"res path: {res.path}")
-    #print(f"\n\nheadlist before: {res.headList}")
     hehe = response.findContentType(path, res.headList)
     if hehe == "e":
         res.validPath = False
-    #print(f"headlist after: {res.headList}\n\n")
 
-    isImg = False
-    if "img" in path or "png" in path or "gif" in path or "ico" in path or "webp" in path:
-        if path == "/favicon.ico":
-            path = "/public/imgs/favicon.ico"
-        data = response.fileReader(path)
-        isImg = True
-    elif "index.html" in path:
-        data = response.fileReader("/public/layout/layout.html").decode()
 
-        data2 = response.fileReader(path).decode()
-        data = data.replace("{{content}}", data2)
-    elif "chat.html" in path:
+
+    # a result of my laziness I didn't make a seperate path for either of these routes
+    # explicitly checks if path is for index.html or chat.html and renders page using
+    # layout as defined
+    if "index.html" in path or "chat.html" in path:
         data = response.fileReader("/public/layout/layout.html").decode()
         data2 = response.fileReader(path).decode()
         data = data.replace("{{content}}", data2)
@@ -74,31 +83,9 @@ def serveHTML(request, handler):
     if data == "e" or data == b"e":
         res.validPath = False
 
-    if isImg:
-        res.bytes(data)
-    else:
-        res.text(data)
-    # currently not calling text/sending back data
-
-    if "/api/chats" in request.path:
-        #print(f"I am trying to respond with chats")
-        res2 = Response()
-        res2.path = request.path
-        allData = dbm.getAllMessages()
-        
-        retList = []
-        headList = res2.headList
-        for x in allData:
-            if x.get("deleted") != "True":
-                # for making the data more human readable, remove the ID value mongo assigns
-                cleanx = {key: value for key, value in x.items() if key != '_id'}
-                retList.append(cleanx)
-        res2.data4json = {"messages":retList}
-        handler.request.sendall(res2.to_data())
-        #print(f"\n\nres2 full text: {res2.responseTxt}")
-    else:
-        handler.request.sendall(res.to_data())
-        #print(f"\n\nres full text: {res.responseTxt}")
+  
+    res.text(data) 
+    handler.request.sendall(res.to_data())
 
 
 # for getting & displaying chat messages
