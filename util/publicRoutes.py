@@ -54,7 +54,7 @@ def serveHTML(request, handler):
     #print(f"headlist after: {res.headList}\n\n")
 
     isImg = False
-    if "img" in path or "png" in path or "gif" in path or "ico" in path:
+    if "img" in path or "png" in path or "gif" in path or "ico" in path or "webp" in path:
         if path == "/favicon.ico":
             path = "/public/imgs/favicon.ico"
         data = response.fileReader(path)
@@ -71,7 +71,7 @@ def serveHTML(request, handler):
     else:
         data = response.fileReader(path).decode()
     
-    if data == "e":
+    if data == "e" or data == b"e":
         res.validPath = False
 
     if isImg:
@@ -146,9 +146,9 @@ def addChats(request, handler):
         
 
     dBody = body.decode()
-    dBody = dBody.replace("&","&amp")
-    dBody = dBody.replace("<","&lt")
-    dBody = dBody.replace(">","&gt")
+    dBody = dBody.replace("&","&amp;")
+    dBody = dBody.replace("<","&lt;")
+    dBody = dBody.replace(">","&gt;")
     wBody = json.loads(dBody)
 
     print(f"data to add: {wBody}")
@@ -193,9 +193,9 @@ def updateChats(request, handler):
 
     #print(f"update value: {update}")
     uContent = update.get('content')
-    uContent = uContent.replace("&","&amp")
-    uContent = uContent.replace("<","&lt")
-    uContent = uContent.replace(">","&gt")
+    uContent = uContent.replace("&","&amp;")
+    uContent = uContent.replace("<","&lt;")
+    uContent = uContent.replace(">","&gt;")
     update.update({'content':uContent})
 
     #print(f"update now:{update}")

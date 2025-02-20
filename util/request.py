@@ -20,16 +20,9 @@ class Request:
         divyUp.remove(divyUp[0])
         self.joshAllen(mvp)
 
-        try:
-            #workableData = self.parseHeaders(divyUp)
-            #print(f"workable data:{workableData}")
-            #bodydataLen = len(workableData)
-            #bodyData = workableData[bodydataLen-1]
-            #self.body = bodyData.encode()
-            self.parseHeaders(divyUp)
-            self.body = splitReq[1]
-        except IndexError:
-            pass
+        self.parseHeaders(divyUp)
+        self.body = splitReq[1] if len(splitReq) > 1 else b""
+
 
 
     # takes in a request then builds that request back as a string of decoded characters
@@ -40,9 +33,10 @@ class Request:
     # sets the method, version, and path variables, aka the MVP: Josh Allen
     def joshAllen(self, mvpString):
         jAllen = mvpString.split(' ')
+
         self.method = jAllen[0] if len(jAllen) > 0 else ""
         self.path = jAllen[1] if len(jAllen) > 1 else "/"
-        self.http_version = jAllen[2].split('/')[1] if len(jAllen) > 2 else "1.1"
+        self.http_version = jAllen[2] if len(jAllen) > 2 else "HTTP/1.1"
         
 
     # parseHeaders takes in a list of strings, each string in list is a header key and value, sets header and cookie dicts
@@ -90,11 +84,14 @@ class Request:
                     if "=" in cookiePair:
                         cookieKey, cookieVal = cookiePair.split("=", 1)
                         self.cookies[cookieKey.strip()] = cookieVal.strip()
-                        
+
     
 def test1():
     request = Request(b'GET / HTTP/1.1\r\nHost: localhost:8080\r\nConnection: keep-alive\r\n\r\n')
+    print(f"method:{request.method}\nversion:{request.http_version}\npath:{request.path}")
     assert request.method == "GET"
+    assert request.http_version == "HTTP/1.1"
+    assert request.path == "/"
     assert "Host" in request.headers
     assert request.headers["Host"] == "localhost:8080"  # note: The leading space in the header value must be removed
     assert request.body == b""  # There is no body for this request.
