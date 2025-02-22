@@ -1,19 +1,26 @@
 from util.response import Response
 from util import response
 from util import database as dbm
+from util import helper as help
 import json
 import uuid
+
+
+
+
+
+
 
 # according to project write up, I may need to use a different function
 # when the requested path is "/" and "/chat"
 def serveCSS(request, handler):
     res = Response()
     res.path = request.path
-    hehe = response.findContentType(res.path, res.headList)
-    if hehe == "e":
-        res.validPath = False
+    hehe = help.findContentType(res.path, res.headList)
+    if hehe != "e":
+        res.validPath = True
 
-    data = response.fileReader(res.path).decode()
+    data = help.fileReader(res.path).decode()
     res.text(data)
     handler.request.sendall(res.to_data())
 
@@ -21,10 +28,10 @@ def serveCSS(request, handler):
 def serveImg(request, handler):
     res = Response()
     res.path = request.path
-    response.findContentLength(res.path,res.headList)
-    data = response.fileReader(res.path)
-    if data == "e" or data == b"e":
-        res.validPath = False
+    help.findContentLength(res.path,res.headList)
+    data = help.fileReader(res.path)
+    if data != "e" and data != b"e":
+        res.validPath = True
     res.bytes(data)
     handler.request.sendall(res.to_data())
 
@@ -32,10 +39,10 @@ def faviconLoader(request, handler):
     res = Response()
     print(f"requested:{request.path}")
     res.path = "/public/imgs/favicon.ico"
-    response.findContentLength(res.path,res.headList)
-    data = response.fileReader(res.path)
-    if data == "e" or data == b"e":
-        res.validPath = False
+    help.findContentLength(res.path,res.headList)
+    data = help.fileReader(res.path)
+    if data != "e" and data != b"e":
+        res.validPath = True
     res.bytes(data)
     handler.request.sendall(res.to_data())
 
@@ -51,22 +58,22 @@ def serveHTML(request, handler):
     path = request.path
     if request.path == "/":
         path += "/public/index.html"
-    if "js" in path:
-        path2 = "/public/js"
-        if "/public/js" in path:
-            i = 0
-        else:
-            path = path2 + path
-    if "layout" in path:
-        path2 = "/public/layout"
-        path = path2 + path
+   # if "js" in path:
+   #     path2 = "/public/js"
+   #     if "/public/js" in path:
+   #         i = 0
+   #     else:
+   #         path = path2 + path
+   # if "layout" in path:
+   #     path2 = "/public/layout"
+   #     path = path2 + path
     if "chat" in path and "js" not in path:
         path = "/public/chat.html"
 
     res.path = path
-    hehe = response.findContentType(path, res.headList)
-    if hehe == "e":
-        res.validPath = False
+    hehe = help.findContentType(path, res.headList)
+    if hehe != "e":
+        res.validPath = True
 
 
 
@@ -74,15 +81,18 @@ def serveHTML(request, handler):
     # explicitly checks if path is for index.html or chat.html and renders page using
     # layout as defined
     if "index.html" in path or "chat.html" in path:
-        data = response.fileReader("/public/layout/layout.html").decode()
-        data2 = response.fileReader(path).decode()
+        data = help.fileReader("/public/layout/layout.html").decode()
+        data2 = help.fileReader(path).decode()
         data = data.replace("{{content}}", data2)
     else:
-        data = response.fileReader(path).decode()
+        data = help.fileReader(path).decode()
     
-    if data == "e" or data == b"e":
-        res.validPath = False
-
+    print(f"DATA VALUE: {data}")
+    print(f"VALID PATH: {res.validPath}")
+    if data != "e" and data != b"e":
+        res.validPath = True
+        print(f"VALID PATH UPDATED TO: {res.validPath}")
+    
   
     res.text(data) 
     handler.request.sendall(res.to_data())
@@ -90,26 +100,10 @@ def serveHTML(request, handler):
 
 # for getting & displaying chat messages
 def serveChats(request, handler):
-    res2 = Response()
-    res2.path = request.path
-    allData = dbm.getAllMessages()
-        
-    retList = []
-    headList = res2.headList
-    for x in allData:
-        if x.get("deleted") != "True":
-            # for making the data more human readable, remove the ID value mongo assigns
-            cleanx = {key: value for key, value in x.items() if key != '_id'}
-            retList.append(cleanx)
-    res2.data4json = {"messages":retList}
-    res2.json({"messages":retList})
-    handler.request.sendall(res2.to_data())
-
-def serveChatsOld(request, handler):
-    print(f"I am trying to respond with chats")
     res = Response()
     res.path = request.path
     allData = dbm.getAllMessages()
+
     retList = []
     headList = res.headList
     for x in allData:
@@ -117,8 +111,12 @@ def serveChatsOld(request, handler):
             # for making the data more human readable, remove the ID value mongo assigns
             cleanx = {key: value for key, value in x.items() if key != '_id'}
             retList.append(cleanx)
-    res.json(retList)
+    res.data4json = {"messages":retList}
+    res.json({"messages":retList})
+    res.validPath = True
     handler.request.sendall(res.to_data())
+
+
 
 # for posting chat messages
 # will also involve setting a session cookie for user if not logged in
@@ -176,6 +174,7 @@ def addChats(request, handler):
 def updateChats(request, handler):
     print("UPDATING CHAT")
     res = Response()
+    res.validPath = True
     update = json.loads(request.body)
 
     #print(f"update value: {update}")
@@ -216,7 +215,7 @@ def updateChats(request, handler):
 # for deleting a chat message
 def deleteChats(request, handler):
     res = Response()
-    
+    res.validPath = True
     res.path = request.path
     
     msgId = res.path.split('/chats/')[1]
@@ -232,3 +231,5 @@ def deleteChats(request, handler):
         res.code = 403
         res.status = "Forbidden"
     handler.request.sendall(res.to_data())
+
+

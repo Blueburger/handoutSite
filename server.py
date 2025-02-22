@@ -20,6 +20,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         self.router.add_route("PATCH","/api/chats/", pr.updateChats, False)
         self.router.add_route("DELETE","/api/chats/", pr.deleteChats, False)
         self.router.add_route("GET","/favicon.ico", pr.faviconLoader, True)
+        self.router.add_route("GET","/public/",pr.serveHTML,False)
         
         super().__init__(request, client_address, server)
 
