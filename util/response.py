@@ -1,7 +1,5 @@
 import json
 
-
-
 class Response:
     def __init__(self):
         
@@ -10,123 +8,82 @@ class Response:
         self.body = b''
         self.code = '200'
         self.status = 'OK'
-        self.headList = {"X-Content-Type-Options": "nosniff","Content-Type": "text/plain; charset=UTF-8","Content-Length": "0",}
+        self.headList = {"X-Content-Type-Options": "nosniff","Content-Type": "text/plain; charset=utf-8","Content-Length": "0",}
         self.cookieList = {}
         self.path = ''
-        self.validPath = False
         self.method = ''
         self.data4json = ''
+        self.iserror = False
 
+    # takes in a code and text and sets the code and status instance vars
+    # code can be an int or a string (it is explicitly converted into str later)
+    # text should be a string
     def set_status(self, code, text):
         self.code = code
         self.status = text
         return self
 
-    def headers(self, headerDict):
-        self.headList.update(headerDict)
+    # updates the headList dict by either replacing a pairing or adding a new one
+    def headers(self, headers):
+        self.headList.update(headers)
         return self
 
-    def cookies(self, cookieDict):
-        self.cookieList.update(cookieDict)
+    # updates the cookieList dict by either replacing a pairing or adding a new one
+    def cookies(self, cookies):
+        self.cookieList.update(cookies)
         return self
 
-
-    def ADDheaders(self, allHeader):
-        for elem, val in allHeader.items():
-            headType = elem
-            headVal = val
-            self.responseTxt = self.responseTxt + ("\r" + "\n" + str(headType) + ": " + str(headVal)).encode()
-        
-
-    # similar to the logic in headers, cookies will also require the self.cookies be passed in as its arg
-    # in this situation the cookie dict values should be along the lines of cookieName: cookie value and all directives
-    def ADDcookies(self, cookies):
-        for elem, val in cookies.items():
-            print(f"SETTING COOKIES:\nelem:{elem}\nvalue:{val}")
-            cookieType = elem
-            cookieVal = val
-            self.responseTxt = self.responseTxt + ("\r" + "\n" + "Set-Cookie: " + str(cookieType) + "=" + str(cookieVal)).encode()
-            # Zaid said that these functions should simply update the dictionary
-
-    # to be used when the body of the request is data that SHOULD NOT BE DECODED
+    # takes in byte data and applies it to the current body
     def bytes(self, data):
         self.body += data
-        # if bytes are added to body, an error response should not be set
-        if data != "e" and data != b"e":
-            self.validPath = True
         return self
     
-    # akin to bytes but when the body of the request can be plaintext
+    # takes in text data, encodes that and applies it to the current body
     def text(self, data):
         data = data.encode()
         self.body += data
-        # if text is being added to body and error response should not be sent
-        
-        if data != "e" and data != b"e":
-            self.validPath = True
         return self
         
-
+    # json calls self.headers to update the content type
+    # then sets the body data to the encoded json
     def json(self, data):
-        # I mean this should work, json.dumps takes list, string, and dict as valid types
         self.headers({"Content-Type":"application/json"})
-        loadData = json.dumps(data)
-        self.body = loadData.encode()
-        # Logic: if JSON data is loaded into the body then the requested path would need to be valid
-        if data != "e" and data != b"e":
-            self.validPath = True
+        self.body = json.dumps(data).encode()
         return self
 
     # to data will be the builder, it will call all the necessary functions to build and return the proper response
     def to_data(self):
+        # ensure responseTxt is empty before building the response
         self.responseTxt = b''
-        if not self.validPath:
-            print(f"the requested path for:{self.path}\nwas invalid and has been aborted")
-            er = "HTTP/1.1 404 Not Found\r\nX-Content-Type-Options: nosniff\r\nContent-Type: text/plain\r\nContent-Length: 43\r\n\r\nThe Page you are looking for does not exist".encode()
-            return er
-
-        
-        # step 1: set the http versions
+        # step 1: set the http version
         self.responseTxt += self.http.encode() 
         # step 2: set the status
         self.responseTxt += (f"{self.code} {self.status}").encode()
-        #self.set_status(self.code, self.status)
-        # step 3: apply necessary headers
+        # step 3: find and apply necessary headers
         help.findContentLength(self.body,self.headList)
         help.findContentType(self.path,self.headList)
-       
-        print(f"\n=== DEBUG: Making the Response ===")
-        print(f"STATUS: {self.code} {self.status}")
-        print(f"HEADERS: {self.headList}")
-        print(f"COOKIES: {self.cookieList}")
-        print(f"BODY LENGTH: {len(self.body)}\n")
-        print(f"DEBUG: Nosniff Header Present? {'X-ContentTypeOptions' in self.headList}")
-
-        self.ADDheaders(self.headList)
+        for elem, val in self.headList.items():
+            headType = elem
+            headVal = val
+            self.responseTxt = self.responseTxt + ("\r" + "\n" + str(headType) + ": " + str(headVal)).encode()
         # step 4: apply necessary cookies
-        self.ADDcookies(self.cookieList)
+        for elem, val in self.cookieList.items():
+            cookieType = elem
+            cookieVal = val
+            self.responseTxt = self.responseTxt + ("\r" + "\n" + "Set-Cookie: " + str(cookieType) + "=" + str(cookieVal)).encode()
         # step 5: apply necessary body data
-        # we are assuming here that text/data would have been called already
-        # all that is left is to add that data onto the end of the response
-        # adds the double CRLF that preceeds body
+        # start by adding the double CRLF to the end of the response
         self.responseTxt += ("\r" + "\n" + "\r" + "\n").encode()
 
-        # updated so response text should always be bytes
-        # encodes the existing body data if it is not already
-        
+        # explicitly checks if the body is bytes, if not it converts
+        # this logic should be redundant now as self.body will always be a byte string        
         if not isinstance(self.body, bytes):
             self.body = str(self.body).encode()
-        
-        # add the body data to the encoded response text, body data is assumed to be encoded already
-        self.responseTxt = self.responseTxt + self.body
-       
-        if self.validPath == True:
-            return self.responseTxt
-        else:
-            print(f"the requested path for:{self.path}\nwas invalid and has been aborted")
-            er = "HTTP/1.1 404 Not Found\r\nX-Content-Type-Options: nosniff\r\nContent-Type: text/plain\r\nContent-Length: 43\r\n\r\nThe Page you are looking for does not exist".encode()
-            return er
 
+        # add body to the response
+        self.responseTxt = self.responseTxt + self.body
+        # return the response text
+        return self.responseTxt
 
 
 
@@ -151,7 +108,7 @@ class Response:
 def test1():
     res = Response()
     res.text("hello")
-    expected = b'HTTP/1.1 200 OK\r\nX-Content-Type-Options: nosniff\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Length: 5\r\n\r\nhello'
+    expected = b'HTTP/1.1 200 OK\r\nX-Content-Type-Options: nosniff\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 5\r\n\r\nhello'
     actual = res.to_data()
     print(f"actual: {actual}")
     assert expected == actual
@@ -161,7 +118,7 @@ def test1():
 def test2():
     res = Response()
     res.text("Passersby were amazed by the unusually large amounts of bloodPassersby were amazed by the unusually large amounts of bloodPassersby were amazed by the unusually large amounts of bloodPassersby were amazed by the unusually large amounts of bloodPassersby were amazed by the unusually large amounts of bloodPassersby were amazed by the unusually large amounts of bloodPassersby were amazed by the unusually large amounts of bloodPassersby were amazed by the unusually large amounts of blood")
-    expected = b'HTTP/1.1 200 OK\r\nX-Content-Type-Options: nosniff\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Length: 488\r\n\r\nPassersby were amazed by the unusually large amounts of bloodPassersby were amazed by the unusually large amounts of bloodPassersby were amazed by the unusually large amounts of bloodPassersby were amazed by the unusually large amounts of bloodPassersby were amazed by the unusually large amounts of bloodPassersby were amazed by the unusually large amounts of bloodPassersby were amazed by the unusually large amounts of bloodPassersby were amazed by the unusually large amounts of blood'
+    expected = b'HTTP/1.1 200 OK\r\nX-Content-Type-Options: nosniff\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 488\r\n\r\nPassersby were amazed by the unusually large amounts of bloodPassersby were amazed by the unusually large amounts of bloodPassersby were amazed by the unusually large amounts of bloodPassersby were amazed by the unusually large amounts of bloodPassersby were amazed by the unusually large amounts of bloodPassersby were amazed by the unusually large amounts of bloodPassersby were amazed by the unusually large amounts of bloodPassersby were amazed by the unusually large amounts of blood'
     actual = res.to_data()
     #print(f"actual:\n{actual}")
     assert expected == actual
@@ -187,7 +144,7 @@ def test4():
     res.text("hello")
     res.bytes(b"hello2")
     res.text("hello")
-    expected = b'HTTP/1.1 200 OK\r\nX-Content-Type-Options: nosniff\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Length: 16\r\n\r\nhellohello2hello'
+    expected = b'HTTP/1.1 200 OK\r\nX-Content-Type-Options: nosniff\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 16\r\n\r\nhellohello2hello'
     actual = res.to_data()
     print(f"actual: {actual}")
     assert expected == actual
@@ -199,7 +156,7 @@ def test5():
     res.text("hello")
     res.bytes(b"hello2")
     res.text("hello")
-    expected = b'HTTP/1.1 200 OK\r\nX-Content-Type-Options: nosniff\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Length: 16\r\nSet-Cookie: session=batman; Max-Age=259200;\r\n\r\nhellohello2hello'
+    expected = b'HTTP/1.1 200 OK\r\nX-Content-Type-Options: nosniff\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 16\r\nSet-Cookie: session=batman; Max-Age=259200;\r\n\r\nhellohello2hello'
     actual = res.to_data()
     print(f"actual:\n{actual}")
     print(f"expected:\n{expected}")
@@ -220,7 +177,7 @@ def test6():
     res.cookies({'dummy':'indeed'})
     res.bytes(b"hello")
     res.headers({'mickey':'mouse'})
-    expected = b'HTTP/1.1 200 OK\r\nX-Content-Type-Options: nosniff\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Length: 13\r\ndonald-duck: rnald\r\nmickey: mouse\r\nSet-Cookie: session=batman; Max-Age=259200;\r\nSet-Cookie: dummy=indeed\r\n\r\nhi therehello'
+    expected = b'HTTP/1.1 200 OK\r\nX-Content-Type-Options: nosniff\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 13\r\ndonald-duck: rnald\r\nmickey: mouse\r\nSet-Cookie: session=batman; Max-Age=259200;\r\nSet-Cookie: dummy=indeed\r\n\r\nhi therehello'
     actual = res.to_data()
     assert(actual == expected)
     print("====== TEST 6 HATH PASSED ========")
@@ -230,8 +187,10 @@ def test6():
 def test7():
     res = Response()
     res.path = "dorkburger"
+    res.set_status(404, "Not Found")
+    res.text('The Page you are looking for does not exist')
     actual = res.to_data()
-    expected = b'HTTP/1.1 404 Not Found\r\nX-Content-Type-Options: nosniff\r\nContent-Type: text/plain\r\nContent-Length: 43\r\n\r\nThe Page you are looking for does not exist'
+    expected = b'HTTP/1.1 404 Not Found\r\nX-Content-Type-Options: nosniff\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 43\r\n\r\nThe Page you are looking for does not exist'
     print(f"actual\n{actual}")
     assert actual == expected 
     print("====== TEST 7 HATH PASSED ========")
@@ -253,12 +212,24 @@ def test8():
     res2.cookies({'dog':'man','hands':'arms'})
     res2.cookies({'dog':'man'})
     res2.headers({'deg':'men'})
-    res2.validPath = True
     actual2 = res2.to_data()
-    expected2 = b'HTTP/1.1 200 OK\r\nX-Content-Type-Options: nosniff\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Length: 0\r\ndeg: men\r\nSet-Cookie: dog=man\r\nSet-Cookie: hands=arms\r\n\r\n'
+    expected2 = b'HTTP/1.1 200 OK\r\nX-Content-Type-Options: nosniff\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 0\r\ndeg: men\r\nSet-Cookie: dog=man\r\nSet-Cookie: hands=arms\r\n\r\n'
     print(f"actual 2 :{actual2}")
     assert actual2 == expected2
     print("Test 8 passed")
+
+
+def test9():
+    res = Response()
+    res.bytes(b'hello bud')
+    res.text('hello bud')
+    res.bytes(b'hello bud')
+    expected = b'HTTP/1.1 200 OK\r\nX-Content-Type-Options: nosniff\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 27\r\n\r\nhello budhello budhello bud'
+    actual = res.to_data()
+    print(f"actual:{actual}")
+    assert actual == expected
+    print("Test 9 passed")
+
 
 if __name__ == '__main__':
     import helper as help
@@ -270,5 +241,6 @@ if __name__ == '__main__':
     test6()
     test7()
     test8()
+    test9()
 else:
     from util import helper as help

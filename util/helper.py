@@ -5,9 +5,9 @@
 
 fileLibrary = {
     "ico": "image/x-icon",
-    "js": "application/javascript; charset=UTF-8",
-    "html": "text/html; charset=UTF-8",
-    "css": "text/css; charset=UTF-8", 
+    "js": "application/javascript; charset=utf-8",
+    "html": "text/html; charset=utf-8",
+    "css": "text/css; charset=utf-8", 
     "jpg":"image/jpeg",
     "png":"image/png",
     "gif":"image/gif",
@@ -23,14 +23,14 @@ def fileReader(path):
         return data
     except (FileNotFoundError, IsADirectoryError) as e:
         print(f"ERROR REPORTED: {e}")
-        return b"e"
+        return None
 
         # a creates and returns a dictionary of headers
 # this dict will be updated as the response is built to contain all proper headers
 def requiredHeaders():
     headList = {
         "X-Content-Type-Options": "nosniff",
-        "Content-Type": "text/plain; charset=UTF-8",
+        "Content-Type": "text/plain; charset=utf-8",
         "Content-Length": "0",
     }
 
@@ -56,7 +56,8 @@ def findContentType(file, headerList):
         contentType = fileLibrary.get(extension)
         if contentType:
             headerList.update({"Content-Type":contentType})
-        return "f"
+            return True
     except ValueError:
-        return "e"
-        
+        return None
+
+

@@ -21,6 +21,8 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         self.router.add_route("DELETE","/api/chats/", pr.deleteChats, False)
         self.router.add_route("GET","/favicon.ico", pr.faviconLoader, True)
         self.router.add_route("GET","/public/",pr.serveHTML,False)
+        self.router.add_route("PATCH","/api/reaction/",pr.addEmoji,False)
+        self.router.add_route("DELETE","/api/reaction/",pr.removeEmoji,False)
         
         super().__init__(request, client_address, server)
 
@@ -31,7 +33,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         print(received_data)
         print("--- end of data ---\n\n")
         request = Request(received_data)
-
+    
         self.router.route_request(request, self)
 
 

@@ -46,34 +46,13 @@ def insertMessage(message,id,cookies):
         # that a new uuid was generated along with returning at uuid as a string
         uniqueId = str(uuid.uuid4())
         retCode = (True,uniqueId)     
-    # unsure why this issue was happening exactly but when DB gets reset the first message
-    # sent will always assign the session token as /
-    # hopefully not a sign of a bigger issue, the easy fix is to explicity check if the session token value is /
-    # and then treat it as if this is someone new sending msg for first time
-    #if uniqueId == "/":
-    #    uniqueId = str(uuid.uuid4())
-    #    retCode = (True,uniqueId)
     
     displayName = str(uniqueId)
     displayName = findGuestName(displayName)
     
-    # originally I was using the uuid as the guest display name, realized the security flaw in that
-    # then I decided to use the uuid still but replace chars so real uuid is protected
-    # but the resulting names were hard to make out and even though they were unique it was hard to tell
-    #for char in displayName:
-    #    if ord(char) % 2 == 0:
-    #        displayName = displayName.replace(char,"X")
-    #    if ord(char) % 3 == 0:
-    #        displayName = displayName.replace(char,"D")
-    #    if ord(char) % 5 == 0:
-    #        displayName = displayName.replace(char,":")
-    #    if ord(char) % 7 == 0:
-    #        displayName = displayName.replace(char,"3")
     
-    
-
-
-
+    # checks if the returned ID value of the message exists
+    # if not set the id to 1, if it did exist id is set to id+1
     if id == None:
         id = 1
     else:
@@ -99,9 +78,11 @@ def insertMessage(message,id,cookies):
     # it will then check the token for validity
     # for simplicity, and since auth is hw 2 stuff, it is just set to False
     authenticated = False 
-
+    reactions = findReactions(id)
+    if not reactions:
+        reactions = {}
     if not authenticated:
-        insert = {"author":guestName,"id":id,"updated":False,"deleted":"False","authorId":uniqueId}
+        insert = {"author":guestName,"id":id,"updated":False,"deleted":"False","authorId":uniqueId,"reactions":reactions}
                   
     else:
         # eventually the logic for checking and authenticationg the XSRF token will be here
@@ -128,6 +109,16 @@ def findGuestName(id):
 def getAllMessages():
     return list(chat_collection.find({}))
 
+# takes the unique ID value of a message then returns the reactions dict of said message
+def findReactions(id):
+    message = findMessageById(id)
+    #print(f"DATA BASE:\nmessage:{message}")
+    reactions = None
+    if message:
+        reactions = message[0]["reactions"]
+        #print(f"DATA BASE:\nreactions:{reactions}")
+    return reactions
+
 def findMessageById(id):
     strId = str(id)
     return list(chat_collection.find({"id":strId}))
@@ -141,6 +132,46 @@ def deleteMessage(id):
 def updateMessage(id,body):
     strId = str(id)
     filter = {"id": strId}
+    reactions = findReactions(id)
     newMessage = body["content"]
     update = {'$set':{"content":newMessage,"updated":True}}
     success = chat_collection.update_one(filter,update)
+
+def addMoji(id,moji,reactor):
+    strId = str(id)
+    filter = {"id": strId}
+    print(f"DATA BASE ADD EMOJI:\nID:{id}\nEmoji:{moji}\nreactor:{reactor}")
+    reactions = findReactions(id) 
+    print(f"current message reactions:{reactions}")
+    alreadyHas = reactions.get(moji)
+    if not alreadyHas:
+        reactions.update({moji:[reactor]})
+    else:
+        if reactor in alreadyHas:
+            return 1
+        else:
+            alreadyHas.append(reactor)
+            reactions.update({moji:alreadyHas})
+    update = {'$set':{"reactions":reactions}}
+    success = chat_collection.update_one(filter,update)
+       
+def removeMoji(id, moji, reactor):
+    strId = str(id)
+    filter = {"id": strId}
+    print(f"DATA BASE REMOVE EMOJI:\nID:{id}\nEmoji:{moji}\nreactor:{reactor}")
+    reactions = findReactions(id) 
+    print(f"current message reactions:{reactions}")
+    # we know the reactions list will have the specific emoji in it already
+    # so it should be safe to assume that previousReactions could never have value None
+    previousReactions = reactions.get(moji)
+    if reactor in previousReactions:
+        previousReactions.remove(reactor)
+        # if removing the reactor from the reactions list results in that list being empty
+        # remove the emoji reaction as a whole from the message
+        if len(previousReactions) == 0:
+            reactions.pop(moji)
+        else:
+            reactions.update({moji:previousReactions})
+    update = {'$set':{"reactions":reactions}}
+    success = chat_collection.update_one(filter,update)
+    print(f"modified message reaction:{reactions}")

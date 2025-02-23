@@ -16,9 +16,10 @@ import uuid
 def serveCSS(request, handler):
     res = Response()
     res.path = request.path
-    hehe = help.findContentType(res.path, res.headList)
-    if hehe != "e":
-        res.validPath = True
+    ctype = help.findContentType(res.path, res.headList)
+    
+    if not ctype:
+        errorSay(request, handler)
 
     data = help.fileReader(res.path).decode()
     res.text(data)
@@ -30,8 +31,8 @@ def serveImg(request, handler):
     res.path = request.path
     help.findContentLength(res.path,res.headList)
     data = help.fileReader(res.path)
-    if data != "e" and data != b"e":
-        res.validPath = True
+    if not data:
+        errorSay(request, handler)
     res.bytes(data)
     handler.request.sendall(res.to_data())
 
@@ -41,8 +42,8 @@ def faviconLoader(request, handler):
     res.path = "/public/imgs/favicon.ico"
     help.findContentLength(res.path,res.headList)
     data = help.fileReader(res.path)
-    if data != "e" and data != b"e":
-        res.validPath = True
+    if not data:
+        errorSay(request, handler)
     res.bytes(data)
     handler.request.sendall(res.to_data())
 
@@ -58,41 +59,37 @@ def serveHTML(request, handler):
     path = request.path
     if request.path == "/":
         path += "/public/index.html"
-   # if "js" in path:
-   #     path2 = "/public/js"
-   #     if "/public/js" in path:
-   #         i = 0
-   #     else:
-   #         path = path2 + path
-   # if "layout" in path:
-   #     path2 = "/public/layout"
-   #     path = path2 + path
     if "chat" in path and "js" not in path:
         path = "/public/chat.html"
 
     res.path = path
-    hehe = help.findContentType(path, res.headList)
-    if hehe != "e":
-        res.validPath = True
+    ctype = help.findContentType(path, res.headList)
+    
+    if not ctype:
+        errorSay(request, handler)
 
 
 
     # a result of my laziness I didn't make a seperate path for either of these routes
     # explicitly checks if path is for index.html or chat.html and renders page using
     # layout as defined
-    if "index.html" in path or "chat.html" in path:
+    print(f"path:{path}")
+    bslogic = path.split("/")
+    last = bslogic[-1]
+    if "index.html" == last or "chat.html" == last:
         data = help.fileReader("/public/layout/layout.html").decode()
         data2 = help.fileReader(path).decode()
         data = data.replace("{{content}}", data2)
     else:
         data = help.fileReader(path).decode()
-    
-    print(f"DATA VALUE: {data}")
-    print(f"VALID PATH: {res.validPath}")
-    if data != "e" and data != b"e":
-        res.validPath = True
-        print(f"VALID PATH UPDATED TO: {res.validPath}")
-    
+
+    #if "index.html" in path or "chat.html" in path:
+    #    data = help.fileReader("/public/layout/layout.html").decode()
+    #    data2 = help.fileReader(path).decode()
+    #    data = data.replace("{{content}}", data2)
+    #else:
+    #    data = help.fileReader(path).decode()
+
   
     res.text(data) 
     handler.request.sendall(res.to_data())
@@ -113,7 +110,6 @@ def serveChats(request, handler):
             retList.append(cleanx)
     res.data4json = {"messages":retList}
     res.json({"messages":retList})
-    res.validPath = True
     handler.request.sendall(res.to_data())
 
 
@@ -163,18 +159,20 @@ def addChats(request, handler):
         retListPost.append(cleanx)
     lastValue2 = retListPost[-1]
     res.data4json = lastValue2
-    res.json(lastValue2)
-    res.status = "Created"
-    res.code = "200"
-    
+    res.set_status(200, "OK")
+    res.text('message created')
 
     handler.request.sendall(res.to_data())
     print(f"final response: {res.responseTxt}")
+
+
+
+
 # for updating a chat message
 def updateChats(request, handler):
     print("UPDATING CHAT")
     res = Response()
-    res.validPath = True
+    res.method = request.method
     update = json.loads(request.body)
 
     #print(f"update value: {update}")
@@ -205,19 +203,18 @@ def updateChats(request, handler):
         print("permission to update granted")
         dbm.updateMessage(msgId,update)
     else:
-        print("you lack perms")
-        res.code = 403
-        res.status = "Forbidden"
+        forbidden(request, handler)
     
     handler.request.sendall(res.to_data())
+
+
 
 
 # for deleting a chat message
 def deleteChats(request, handler):
     res = Response()
-    res.validPath = True
+    res.method = request.method
     res.path = request.path
-    
     msgId = res.path.split('/chats/')[1]
     message = dbm.findMessageById(msgId)
     whoCanEdit = message[0]["authorId"]
@@ -227,9 +224,58 @@ def deleteChats(request, handler):
         print("permission to delete granted")
         dbm.deleteMessage(msgId)
     else:
-        #print("you lack perms")
-        res.code = 403
-        res.status = "Forbidden"
+        forbidden(request, handler)
+    handler.request.sendall(res.to_data())
+
+# returns the error message
+# called individually by the specific end points if they detect the request was improper
+def errorSay(request, handler):
+    res = Response()
+    res.set_status(404, "Not Found")
+    #res.code = 404
+    #res.status = "Not Found"
+    res.text("The page you are looking for could not be found")
+    handler.request.sendall(res.to_data())
+
+# Returns the 404 Forbidden response
+def forbidden(request, handler):
+    res = Response()
+    res.set_status(403, "Forbidden")
+    handler.request.sendall(res.to_data())
+
+# FOR AO 1, adding emoji reactions
+def addEmoji(request, handler):
+    res = Response()
+    res.method = request.method
+    res.path = request.path
+    mojiReact = json.loads(request.body)
+    emoji = mojiReact.get("emoji")
+    print(f"ADDEMOJI:\nmojiReact:{mojiReact}")
+    msgId = res.path.split('/reaction/')[1]
+    message = dbm.findMessageById(msgId)
+    whoCanEdit = message[0]["authorId"]
+    session = request.cookies.get("session")
+
+    success = dbm.addMoji(msgId,emoji,session)
+    if success == 1:
+        forbidden(request, handler)
     handler.request.sendall(res.to_data())
 
 
+def removeEmoji(request, handler):
+    res = Response()
+    res.method = request.method
+    res.path = request.path
+    mojiReact = json.loads(request.body)
+    emoji = mojiReact.get("emoji")
+    print(f"REMOVE EMOJI:\nmojiReact:{mojiReact}")
+    msgId = res.path.split('/reaction/')[1]
+    message = dbm.findMessageById(msgId)
+    whoCanEdit = message[0]["authorId"]
+    session = request.cookies.get("session")
+
+    if session == whoCanEdit:
+        dbm.removeMoji(msgId,emoji,session)
+    else:
+        forbidden(request, handler)
+    handler.request.sendall(res.to_data())
