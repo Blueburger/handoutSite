@@ -82,12 +82,15 @@ def insertMessage(message,id,cookies):
     if not reactions:
         reactions = {}
     if not authenticated:
-        insert = {"author":guestName,"id":id,"updated":False,"deleted":"False","authorId":uniqueId,"reactions":reactions}
-                  
+        insert = {"author":guestName,"id":id,"updated":False,"deleted":"False","authorId":uniqueId,"reactions":reactions}              
     else:
         # eventually the logic for checking and authenticationg the XSRF token will be here
         pass
     
+    hasName = nickNameCheck(session)
+    if hasName:
+        insert.update({"nickname":hasName})
+
     insert.update(messageU)
     print(f"\n\nfinal message Value: {insert}")
     chat_collection.insert_one(insert)
@@ -154,7 +157,9 @@ def addMoji(id,moji,reactor):
             reactions.update({moji:alreadyHas})
     update = {'$set':{"reactions":reactions}}
     success = chat_collection.update_one(filter,update)
-       
+
+# removes an emoji reaction, if the individual removing the emoji was the only one who reacted
+# then remove the emoji from reactions entierly
 def removeMoji(id, moji, reactor):
     strId = str(id)
     filter = {"id": strId}
@@ -175,3 +180,15 @@ def removeMoji(id, moji, reactor):
     update = {'$set':{"reactions":reactions}}
     success = chat_collection.update_one(filter,update)
     print(f"modified message reaction:{reactions}")
+
+# takes in a session token and a nickname both as strings
+def updateName(sesToken, newName):
+    filter = {"authorId":str(sesToken)}
+    chat_collection.update_many(filter,{'$set':{"nickname":newName}})
+    
+def nickNameCheck(sesToken):
+    filter = {"authorId":str(sesToken)}
+    amsg = chat_collection.find_one(filter)
+    if amsg:
+        nickname = amsg.get("nickname")
+        return nickname

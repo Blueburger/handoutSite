@@ -23,6 +23,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         self.router.add_route("GET","/public/",pr.serveHTML,False)
         self.router.add_route("PATCH","/api/reaction/",pr.addEmoji,False)
         self.router.add_route("DELETE","/api/reaction/",pr.removeEmoji,False)
+        self.router.add_route("PATCH","/api/nickname",pr.changeNickName, True)
         
         super().__init__(request, client_address, server)
 

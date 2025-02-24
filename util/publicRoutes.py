@@ -279,3 +279,26 @@ def removeEmoji(request, handler):
     else:
         forbidden(request, handler)
     handler.request.sendall(res.to_data())
+
+
+# I AM GOING TO SEE THE MOVIE: THE MONKEY 
+# SO taking a break from this, change nickname is mostly done
+# currently the only issue is that if a nickname is set, that nickname is NOT applied to new msgs from same user
+# the only way Nicknames are updated for any message is if the change nickname API call is sent
+# Must modify the insertMessage logic so that it can account for if a nickname has already been selected
+# ALSO: must html escape everything
+def changeNickName(request, handler):
+    res = Response()
+    newNameRequest = json.loads(request.body)
+    session = request.cookies.get("session")
+    name =  newNameRequest.get("nickname")
+    # if name is None
+    if not name:
+        pass
+    else: # name does exist
+        name = name.replace("&","&amp;")
+        name = name.replace("<","&lt;")
+        name = name.replace(">","&gt;")
+        dbm.updateName(session, name)
+    handler.request.sendall(res.to_data())
+
